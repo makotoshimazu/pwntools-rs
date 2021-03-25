@@ -1,3 +1,15 @@
+//! ## Example
+//!
+//! ```no_run
+//! use pwntools::process::Process;
+//!
+//! let mut conn = Process::new(&"./some_binary")?;
+//! conn.send(&b"x".repeat(32))?;
+//! conn.send(&0x1337beef_u64.to_le_bytes())?;
+//! conn.interactive()?;
+//! # Ok::<_, std::io::Error>(())
+//! ```
+
 use std::ffi::OsStr;
 use std::io::{self, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};

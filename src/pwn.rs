@@ -1,3 +1,17 @@
+//! ## Example
+//!
+//! ```no_run
+//! use pwntools::pwn::*;
+//!
+//! let pwn = Pwn::new("./some_elf");
+//! println!("name: readn, addr: {:x}", pwn.symbol("readn").unwrap());
+//! println!(
+//!     "name: __stack_chk_fail, addr: {:x}",
+//!     pwn.got("__stack_chk_fail").unwrap()
+//! );
+//! println!("bss: {:#08x}", pwn.bss().unwrap());
+//! ```
+
 use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
