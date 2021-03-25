@@ -1,5 +1,5 @@
 use clap::Clap;
-use ctf_tools::{process::Process, pwn::*};
+use pwntools::{process::Process, pwn::*};
 use std::{
     io,
     ops::{AddAssign, Mul},

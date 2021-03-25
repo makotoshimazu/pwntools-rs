@@ -1,13 +1,21 @@
 [package]
-name = "ctf-tools"
-version = "0.1.0"
-authors = ["Toru Ogawa <Hakuyume@users.noreply.github.com>"]
+authors = [
+  "Toru Ogawa <Hakuyume@users.noreply.github.com>",
+  "Yuki Yamada <yukidmy@gmail.com>",
+  "Makoto Shimazu <makoto.shimaz@gmail.com>",
+  "Shunsuke Nakamura <S-Nakamur-a@users.noreply.github.com>",
+]
+description = "pwntools for Rust"
 edition = "2018"
+license = "Apache-2.0"
+name = "pwntools"
+repository = "https://github.com/makotoshimazu/pwntools-rs"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = "3.0.0-beta.2"
 elf-utilities = "0.2.8"
-num-traits="0.2"
-num-derive="0.3"
+num-derive = "0.3"
+num-traits = "0.2"

@@ -1,5 +1,5 @@
 use clap::Clap;
-use ctf_tools::pwn::*;
+use pwntools::pwn::*;
 use std::io;
 
 #[derive(Clap)]

@@ -1,5 +1,5 @@
 use clap::Clap;
-use ctf_tools::process::Process;
+use pwntools::process::Process;
 use std::io;
 
 #[derive(Clap)]
