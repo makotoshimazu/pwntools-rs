@@ -10,12 +10,12 @@ edition = "2018"
 license = "Apache-2.0"
 name = "pwntools"
 repository = "https://github.com/makotoshimazu/pwntools-rs"
-version = "0.1.0"
+version = "0.1.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-elf-utilities = "0.2.8"
+elf-utilities = "=0.2.8"
 num-derive = "0.3"
 num-traits = "0.2"
 
