@@ -6,3 +6,5 @@ pub mod process;
 
 /// Retrive info from your elf binary.
 pub mod pwn;
+
+pub mod util;
