@@ -13,6 +13,7 @@
 use std::ffi::OsStr;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::thread::sleep;
 
 use crate::util::{Payload, P64};
 
@@ -62,7 +63,7 @@ impl ToVec for Vec<u8> {
     }
 }
 
-impl<const N: usize> ToVec for &[u8; N] {
+impl<const N: usize> ToVec for [u8; N] {
     fn to_vec(&self) -> Vec<u8> {
         self[..].to_vec()
 
@@ -158,12 +159,14 @@ impl Process {
     // Rust的には「勝手にbufferingとかしないので必要ならユーザーで入れてね」という方針
     // std::io::BufWriterというやつがbufferingをしてくれたりする
     pub fn send<D: ToVec>(&mut self, data: &D) -> io::Result<()> {
-        self.stdin.write_all(&data.to_vec())
+        self.stdin.write_all(&data.to_vec())?;
+        self.stdin.flush()
     }
 
     pub fn sendline<D: ToVec>(&mut self, data: &D) -> io::Result<()> {
         self.send(data)?;
-        self.stdin.write_all(b"\n")
+        self.stdin.write_all(b"\n")?;
+        self.stdin.flush()
     }
 
     // https://doc.rust-lang.org/std/io/trait.BufRead.html#method.read_line
@@ -226,12 +229,16 @@ impl Process {
         Err(io::Error::new(io::ErrorKind::Other, "dame"))
     }
 
-    pub fn interactive(mut self) -> io::Result<()> {
+    pub fn interactive(self) -> io::Result<()> {
+        println!("interactive.");
         let mut stdin = self.stdin;
+
         std::thread::spawn(move || std::io::copy(&mut std::io::stdin(), &mut stdin).unwrap());
-        let mut stdout = self.reade;
+        let mut stdout = self.reader;
+
         std::thread::spawn(move || std::io::copy(&mut stdout, &mut std::io::stdout()).unwrap());
-        self.child.wait()?;
+
+        dbg!(self.child.wait_with_output()?.status);
         Ok(())
     }
 }

