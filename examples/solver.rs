@@ -83,7 +83,7 @@ fn main() -> io::Result<()> {
 
     dbg!(std::str::from_utf8(&s.recvline()?));
 
-    let mut x = dbg!(s.recvline())?.strip_suffix(b"\n").unwrap().to_vec();
+    let mut x = s.recvline()?.strip_suffix(b"\n").unwrap().to_vec();
     x.resize(8, b'\x00');
     let printf_addr = u64::from_le_bytes(x.try_into().unwrap());
     println!("printf_addr 0x{:x}", printf_addr);
