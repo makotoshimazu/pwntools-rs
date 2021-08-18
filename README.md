@@ -1,4 +1,4 @@
-# pwntools-rs
+# pwntools
 
 [![](https://img.shields.io/crates/v/pwntools.svg)](https://crates.io/crates/pwntools)
 [![](https://docs.rs/pwntools/badge.svg)](https://docs.rs/pwntools/)
