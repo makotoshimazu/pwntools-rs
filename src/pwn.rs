@@ -78,23 +78,39 @@ impl Pwn {
     pub fn symbol(&self, name: &str) -> Option<u64> {
         let mut result = Vec::new();
         for section in &self.elf.sections {
-            match &section.contents {
-                Contents64::Symbols(data) => {
-                    for symbol in data {
-                        if let Some(st_name) = &symbol.symbol_name {
-                            if st_name == name {
-                                result.push(symbol.st_value);
-                            }
-                        }
+            if let Contents64::Symbols(data) = &section.contents {
+                for symbol in data {
+                    match &symbol.symbol_name {
+                        Some(st_name) if st_name == name => result.push(symbol.st_value),
+                        _ => continue,
                     }
                 }
-                _ => (),
             }
         }
 
         assert!(result.len() <= 1);
         result.first().copied()
     }
+
+    // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
+    // pub fn plt(&self, name: &str) -> Option<u64> {
+    //     let plt = self.get_section(".plt")?;
+
+    //     match &rela_plt.contents {
+    //         section::Contents64::RelaSymbols(data) => {
+    //             dbg!("rela symbols {:?}", &data);
+    //         }
+    //         section::Contents64::Symbols(data) => {
+    //             dbg!("symbols {:?}", &data);
+    //         }
+    //         Contents64::Raw(data) => (),
+    //         Contents64::Symbols(_) => todo!(),
+    //         Contents64::RelaSymbols(_) => todo!(),
+    //         Contents64::Dynamics(_) => todo!(),
+    //     }
+
+    //     None
+    // }
 
     /// Search the symbol's address in the Global Offset Table.
     pub fn got(&self, name: &str) -> Option<u64> {
