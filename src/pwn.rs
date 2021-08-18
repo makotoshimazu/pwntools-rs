@@ -78,17 +78,13 @@ impl Pwn {
     pub fn symbol(&self, name: &str) -> Option<u64> {
         let mut result = Vec::new();
         for section in &self.elf.sections {
-            match &section.contents {
-                Contents64::Symbols(data) => {
-                    for symbol in data {
-                        if let Some(st_name) = &symbol.symbol_name {
-                            if st_name == name {
-                                result.push(symbol.st_value);
-                            }
-                        }
+            if let Contents64::Symbols(data) = &section.contents {
+                for symbol in data {
+                    match &symbol.symbol_name {
+                        Some(st_name) if st_name == name => result.push(symbol.st_value),
+                        _ => continue,
                     }
                 }
-                _ => (),
             }
         }
 

