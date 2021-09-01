@@ -14,3 +14,42 @@ fn main() -> io::Result<()> {
 
     Ok(())
 }
+
+/*
+
+got: []u64 = [
+  addr1,   // addr_got1 <- printf
+  addr2,   // addr_got2 <- puts
+  ...
+]
+
+inv_symbols = {
+  addr_got1: "printf",
+  addr_got2: "puts",
+}
+
+// plt
+plt = [
+  "load ebx, got[0]",  // addr_plt0
+  "je ebx 0 0xNNNN",
+  "jmp got[0]",
+  "load ebx, got[1]",  // addr_plt1
+  "je ebx 0 0xNNNN",
+  "jmp got[1]",
+  "load ebx, got[2]",  // addr_plt2
+  "je ebx 0 0xNNNN",
+  "jmp got[2]",
+  "load ebx, got[3]",
+  "je ebx 0 0xNNNN",
+  "jmp got[3]",
+]
+
+// これがほしい
+plt_symbols = {
+  "printf": addr_plt0,
+  "puts": addr_plt1,
+}
+
+
+
+*/
