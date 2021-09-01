@@ -18,6 +18,8 @@ version = "0.2.0"
 elf-utilities = "=0.2.8"
 num-derive = "0.3"
 num-traits = "0.2"
+# unicorn = { git = "https://github.com/unicorn-engine/unicorn", branch = "next" }
+unicorn = { path = "../unicorn/bindings/rust" }
 
 [dev-dependencies]
 clap = "3.0.0-beta.2"
