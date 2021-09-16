@@ -103,13 +103,14 @@ impl Process {
         Err(io::Error::new(io::ErrorKind::Other, "`pattern` not found before reaching to the end."))
     }
 
-    pub fn interactive(self) -> io::Result<()> {
+    pub fn interactive(mut self) -> io::Result<()> {
         let mut stdin = self.stdin;
 
         std::thread::spawn(move || std::io::copy(&mut std::io::stdin(), &mut stdin).unwrap());
         let mut stdout = self.stdout_reader;
 
         std::thread::spawn(move || std::io::copy(&mut stdout, &mut std::io::stdout()).unwrap());
+        self.child.wait()?;
 
         Ok(())
     }
