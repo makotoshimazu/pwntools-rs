@@ -120,20 +120,35 @@ impl Pwn {
         let mut buf: Vec<u8> = vec![0; v.len()];
         emu.mem_read(plt.header.sh_addr, &mut buf).unwrap();
         assert_eq!(v, &buf);
-        // 0x601f98
-        emu.add_mem_hook(
-            HookType::MEM_READ_UNMAPPED,
-            /*begin=*/ u64::MIN,
-            /*end=*/ u64::MAX,
-            |uc, mem_type, address, size, value| {
-                dbg!((mem_type, address, size, value));
-            },
-        )
-        .unwrap();
-        emu.emu_start(address, address + v.len() as u64, 100, 5)
-            .unwrap();
 
-        Some(0xdeadbeef)
+        let addr = std::rc::Rc::new(std::cell::Cell::new(None));
+        {
+            let addr = addr.clone();
+
+            emu.add_mem_hook(
+                HookType::MEM_READ_UNMAPPED,
+                /*begin=*/ u64::MIN,
+                /*end=*/ u64::MAX,
+                move |mut uc, mem_type, address, size, value| {
+                    dbg!((mem_type, address, size, value));
+                    addr.set(Some(address));
+                    uc.emu_stop().unwrap();
+                },
+            )
+            .unwrap();
+        }
+
+        let target_got = dbg!(self.got(name)?);
+        let mut pc = address;
+        while pc < stop {
+            addr.set(None);
+            drop(emu.emu_start(pc, address + v.len() as u64, 100, 5));
+            if addr.get() == Some(target_got) {
+                return Some(pc);
+            }
+            pc += 4;
+        }
+        return None;
     }
 
     /// Search the symbol's address in the Global Offset Table.
