@@ -110,6 +110,7 @@ impl Process {
         let mut stdout = self.stdout_reader;
 
         std::thread::spawn(move || std::io::copy(&mut stdout, &mut std::io::stdout()).unwrap());
+        self.child.wait()?;
 
         Ok(())
     }
