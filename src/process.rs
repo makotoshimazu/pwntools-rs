@@ -56,6 +56,20 @@ impl ToVec for [u8] {
     }
 }
 
+pub trait Connection {
+    fn send<D: ?Sized + ToVec>(&mut self, data: &D) -> io::Result<()>;
+    fn sendline<D: ?Sized + ToVec>(&mut self, data: &D) -> io::Result<()> {
+        self.send(data)?;
+        self.send(b"\n")?;
+        Ok(())
+    }
+    fn recvline(&mut self) -> io::Result<Vec<u8>> {
+        self.recvuntil(b"\n")
+    }
+    fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>>;
+    fn interactive(self) -> io::Result<()>;
+}
+
 impl Process {
     pub fn new<S>(program: S) -> io::Result<Self>
     where
@@ -74,23 +88,15 @@ impl Process {
             stdout_reader,
         })
     }
+}
 
-    pub fn send<D: ?Sized + ToVec>(&mut self, data: &D) -> io::Result<()> {
+impl Connection for Process {
+    fn send<D: ?Sized + ToVec>(&mut self, data: &D) -> io::Result<()> {
         self.stdin.write_all(&data.to_vec())?;
         self.stdin.flush()
     }
 
-    pub fn sendline<D: ?Sized + ToVec>(&mut self, data: &D) -> io::Result<()> {
-        self.send(data)?;
-        self.stdin.write_all(b"\n")?;
-        self.stdin.flush()
-    }
-
-    pub fn recvline(&mut self) -> io::Result<Vec<u8>> {
-        self.recvuntil(b"\n")
-    }
-
-    pub fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
+    fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
         let mut result = vec![];
 
         let mut buf = [0; 1];
@@ -100,10 +106,13 @@ impl Process {
                 return Ok(result);
             }
         }
-        Err(io::Error::new(io::ErrorKind::Other, "`pattern` not found before reaching to the end."))
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "`pattern` not found before reaching to the end.",
+        ))
     }
 
-    pub fn interactive(mut self) -> io::Result<()> {
+    fn interactive(mut self) -> io::Result<()> {
         let mut stdin = self.stdin;
 
         std::thread::spawn(move || std::io::copy(&mut std::io::stdin(), &mut stdin).unwrap());
