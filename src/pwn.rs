@@ -16,6 +16,7 @@ use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
 };
+use unicorn::unicorn_const::{Arch, HookType, Mode, Permission};
 
 // use num_derive::{FromPrimitive, ToPrimitive};
 // use num_traits::FromPrimitive;
@@ -93,24 +94,62 @@ impl Pwn {
     }
 
     // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
-    // pub fn plt(&self, name: &str) -> Option<u64> {
-    //     let plt = self.get_section(".plt")?;
+    pub fn plt(&self, name: &str) -> Option<u64> {
+        let plt = self.get_section(".plt")?;
+        dbg!(plt.header.sh_addr);
 
-    //     match &rela_plt.contents {
-    //         section::Contents64::RelaSymbols(data) => {
-    //             dbg!("rela symbols {:?}", &data);
-    //         }
-    //         section::Contents64::Symbols(data) => {
-    //             dbg!("symbols {:?}", &data);
-    //         }
-    //         Contents64::Raw(data) => (),
-    //         Contents64::Symbols(_) => todo!(),
-    //         Contents64::RelaSymbols(_) => todo!(),
-    //         Contents64::Dynamics(_) => todo!(),
-    //     }
+        let v: &Vec<u8> = match &plt.contents {
+            Contents64::Raw(data) => {
+                dbg!(data.len());
+                data
+            }
+            _ => unreachable!(),
+        };
 
-    //     None
-    // }
+        let mut unicorn =
+            unicorn::Unicorn::new(Arch::X86, Mode::LITTLE_ENDIAN | Mode::MODE_64).unwrap();
+        let mut emu = unicorn.borrow();
+
+        let address = plt.header.sh_addr;
+        let start = address & (!0xfff);
+        let stop = (address + v.len() as u64 + 0xfff) & (!0xfff);
+        emu.mem_map(start, (stop - start) as usize, Permission::ALL)
+            .unwrap();
+        emu.mem_write(plt.header.sh_addr, v).unwrap();
+
+        let mut buf: Vec<u8> = vec![0; v.len()];
+        emu.mem_read(plt.header.sh_addr, &mut buf).unwrap();
+        assert_eq!(v, &buf);
+
+        let addr = std::rc::Rc::new(std::cell::Cell::new(None));
+        {
+            let addr = addr.clone();
+
+            emu.add_mem_hook(
+                HookType::MEM_READ_UNMAPPED,
+                /*begin=*/ u64::MIN,
+                /*end=*/ u64::MAX,
+                move |mut uc, mem_type, address, size, value| {
+                    dbg!((mem_type, address, size, value));
+                    addr.set(Some(address));
+                    uc.emu_stop().unwrap();
+                },
+            )
+            .unwrap();
+        }
+
+        let target_got = dbg!(self.got(name)?);
+        let mut pc = address;
+        while pc < stop {
+            addr.set(None);
+            drop(emu.emu_start(pc, address + v.len() as u64, 100, 5));
+            if addr.get() == Some(target_got) {
+                return Some(pc);
+            }
+            pc += 4;
+        }
+        return None;
+    }
 
     /// Search the symbol's address in the Global Offset Table.
     pub fn got(&self, name: &str) -> Option<u64> {
