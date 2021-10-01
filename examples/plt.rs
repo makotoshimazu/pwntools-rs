@@ -28,7 +28,7 @@ inv_symbols = {
   addr_got2: "puts",
 }
 
-// plt
+// code to jump to the addresses in got is located at plt.
 plt = [
   "load ebx, got[0]",  // addr_plt0
   "je ebx 0 0xNNNN",
@@ -44,12 +44,10 @@ plt = [
   "jmp got[3]",
 ]
 
-// これがほしい
+// pwn.plt() returns the address of the instruction as follows:
 plt_symbols = {
   "printf": addr_plt0,
   "puts": addr_plt1,
 }
-
-
 
 */
