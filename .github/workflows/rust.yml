@@ -35,6 +35,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: |
-      unset CI
-      cargo fmt --verbose -- --check
-      cargo clippy --all-targets --all-features
+        unset CI
+        cargo fmt --verbose -- --check
+        cargo clippy --all-targets --all-features
