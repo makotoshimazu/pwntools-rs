@@ -16,7 +16,7 @@ use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
 };
-use unicorn::unicorn_const::{Arch, HookType, Mode, Permission};
+use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
 
 // use num_derive::{FromPrimitive, ToPrimitive};
 // use num_traits::FromPrimitive;
@@ -107,7 +107,7 @@ impl Pwn {
         };
 
         let mut unicorn =
-            unicorn::Unicorn::new(Arch::X86, Mode::LITTLE_ENDIAN | Mode::MODE_64).unwrap();
+            unicorn_engine::Unicorn::new(Arch::X86, Mode::LITTLE_ENDIAN | Mode::MODE_64).unwrap();
         let mut emu = unicorn.borrow();
 
         let address = plt.header.sh_addr;
