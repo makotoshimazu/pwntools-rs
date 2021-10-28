@@ -1,5 +1,5 @@
 use clap::Clap;
-use pwntools::{process::Process, pwn::*, util::*};
+use pwntools::{connection::Connection, connection::Process, pwn::*, util::*};
 use std::{io, time};
 
 #[derive(Clap)]
