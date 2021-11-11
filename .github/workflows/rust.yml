@@ -1,0 +1,38 @@
+name: Rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+        - x86_64-unknown-linux-gnu
+        dependency-versions:
+        - maximum
+    steps:
+    - uses: actions/checkout@v2
+    - if: matrix.dependency-versions == 'minimal'
+      run: |
+        rustup toolchain add nightly
+        cargo +nightly update -Z minimal-versions
+    - run: rustup target add ${{ matrix.target }}
+    - run: |
+        unset CI
+        cargo build --verbose --target ${{ matrix.target }} --all-targets --all-features
+        cargo test --verbose --target ${{ matrix.target }} --all-features
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: |
+        unset CI
+        cargo fmt --verbose -- --check
+        cargo clippy --all-targets --all-features
