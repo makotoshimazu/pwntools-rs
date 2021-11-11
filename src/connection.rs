@@ -1,7 +1,8 @@
 //! ## Example
 //!
 //! ```no_run
-//! use pwntools::process::Process;
+//! use pwntools::connection::Process;
+//! use pwntools::connection::Connection;
 //!
 //! let mut conn = Process::new(&"./some_binary")?;
 //! conn.send(&b"x".repeat(32))?;
