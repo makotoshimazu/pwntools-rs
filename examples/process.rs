@@ -1,8 +1,8 @@
-use clap::Clap;
+use clap::Parser;
 use pwntools::{connection::Connection, connection::Process};
 use std::io;
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Opts {
     program: String,
 }
