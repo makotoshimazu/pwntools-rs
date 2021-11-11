@@ -1,8 +1,8 @@
-use clap::Clap;
+use clap::Parser;
 use pwntools::{connection::Connection, connection::Process, pwn::*, util::*};
 use std::{io, time};
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Opts {
     elf_file: String,
 }
