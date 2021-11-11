@@ -26,7 +26,6 @@ jobs:
         cargo +nightly update -Z minimal-versions
     - run: rustup target add ${{ matrix.target }}
     - run: |
-        unset CI
         cargo build --verbose --target ${{ matrix.target }} --all-targets --all-features
         cargo test --verbose --target ${{ matrix.target }} --all-features
   lint:
