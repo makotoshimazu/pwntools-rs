@@ -148,7 +148,7 @@ impl Pwn {
             }
             pc += 4;
         }
-        return None;
+        None
     }
 
     /// Search the symbol's address in the Global Offset Table.
