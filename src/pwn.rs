@@ -142,7 +142,7 @@ impl Pwn {
         let mut pc = address;
         while pc < stop {
             addr.set(None);
-            drop(emu.emu_start(pc, address + v.len() as u64, 100, 5));
+            let _ = emu.emu_start(pc, address + v.len() as u64, 100, 5);
             if addr.get() == Some(target_got) {
                 return Some(pc);
             }
