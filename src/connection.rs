@@ -4,12 +4,16 @@
 //! use pwntools::connection::Process;
 //! use pwntools::connection::Connection;
 //!
-//! let mut conn = Process::new(&"./some_binary")?;
-//! conn.send(&b"x".repeat(32))?;
-//! conn.send(&0x1337beef_u64.to_le_bytes())?;
-//! conn.interactive()?;
-//! # Ok::<_, std::io::Error>(())
+//! # async fn dox() -> std::io::Result<()> {
+//!     let mut conn = Process::new(&"./some_binary")?;
+//!     conn.send(&b"x".repeat(32)).await?;
+//!     conn.send(&0x1337beef_u64.to_le_bytes()).await?;
+//!     conn.interactive().await?;
+//!     # Ok::<_, std::io::Error>(())
+//! # }
 //! ```
+// https://docs.rs/tokio/1.14.0/src/tokio/io/util/async_buf_read_ext.rs.html#231-239
+// https://docs.rs/tokio/1.14.0/tokio/io/trait.AsyncBufReadExt.html#method.split
 
 use async_trait::async_trait;
 use futures::future;
