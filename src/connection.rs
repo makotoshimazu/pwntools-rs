@@ -14,15 +14,16 @@
 use async_trait::async_trait;
 use futures::future;
 use std::ffi::OsStr;
-use std::io::{self, BufReader, Read, Write};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::io;
+use std::process::Stdio;
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
+use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
 use crate::util::{Payload, P64};
 
 pub struct Process {
-    child: Child,
+    _child: Child,
     stdin: ChildStdin,
     stdout_reader: BufReader<ChildStdout>,
 }
@@ -89,7 +90,7 @@ impl Process {
         let stdout = child.stdout.take().unwrap();
         let stdout_reader = BufReader::new(stdout);
         Ok(Self {
-            child,
+            _child: child,
             stdin,
             stdout_reader,
         })
@@ -99,15 +100,16 @@ impl Process {
 #[async_trait]
 impl Connection for Process {
     async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
-        self.stdin.write_all(&data.to_vec())?;
-        self.stdin.flush()
+        self.stdin.write_all(&data.to_vec()).await?;
+        self.stdin.flush().await?;
+        Ok(())
     }
 
     async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
         let mut result = vec![];
 
-        let mut buf = [0; 1];
-        while self.stdout_reader.read_exact(&mut buf).is_ok() {
+        let mut buf = [0];
+        while self.stdout_reader.read_exact(&mut buf).await.is_ok() {
             result.extend_from_slice(&buf);
             if result.ends_with(pattern) {
                 return Ok(result);
@@ -120,13 +122,11 @@ impl Connection for Process {
     }
 
     async fn interactive(mut self) -> io::Result<()> {
-        let mut stdin = self.stdin;
-
-        std::thread::spawn(move || std::io::copy(&mut std::io::stdin(), &mut stdin).unwrap());
-        let mut stdout = self.stdout_reader;
-
-        std::thread::spawn(move || std::io::copy(&mut stdout, &mut std::io::stdout()).unwrap());
-        self.child.wait()?;
+        future::try_join(
+            tokio::io::copy(&mut tokio::io::stdin(), &mut self.stdin),
+            tokio::io::copy(&mut self.stdout_reader, &mut tokio::io::stdout()),
+        )
+        .await?;
 
         Ok(())
     }

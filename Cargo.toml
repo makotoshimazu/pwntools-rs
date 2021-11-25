@@ -23,7 +23,7 @@ num-traits = "0.2"
 # unicorn = { git = "https://github.com/Hakuyume/unicorn", branch = "build-in-build-script-master" }
 unicorn-engine = "2.0.0-rc4"
 async-trait = "0.1.51"
-tokio = { version = "1.10.0", features=["macros", "io-util", "io-std"] }
+tokio = { version = "1.10.0", features=["macros", "io-util", "io-std", "process"] }
 futures = "0.3.16"
 
 [dev-dependencies]
