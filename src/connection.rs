@@ -82,6 +82,12 @@ pub trait Connection: Sized {
         Ok(())
     }
 
+    async fn sendline<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
+        self.send(data).await?;
+        self.send(b"\n").await?;
+        Ok(())
+    }
+
     async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
         let reader = self.reader_mut();
         let mut buf = vec![];
