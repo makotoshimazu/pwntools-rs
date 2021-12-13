@@ -12,6 +12,8 @@
 //! println!("bss: {:#08x}", pwn.bss().unwrap());
 //! ```
 
+use std::borrow::BorrowMut;
+
 use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
@@ -108,7 +110,7 @@ impl Pwn {
 
         let mut unicorn =
             unicorn_engine::Unicorn::new(Arch::X86, Mode::LITTLE_ENDIAN | Mode::MODE_64).unwrap();
-        let mut emu = unicorn.borrow();
+        let emu = unicorn.borrow_mut();
 
         let address = plt.header.sh_addr;
         let start = address & (!0xfff);
@@ -129,10 +131,12 @@ impl Pwn {
                 HookType::MEM_READ_UNMAPPED,
                 /*begin=*/ u64::MIN,
                 /*end=*/ u64::MAX,
-                move |mut uc, mem_type, address, size, value| {
+                move |uc, mem_type, address, size, value| {
                     dbg!((mem_type, address, size, value));
                     addr.set(Some(address));
                     uc.emu_stop().unwrap();
+                    /* what's this? */
+                    true
                 },
             )
             .unwrap();
