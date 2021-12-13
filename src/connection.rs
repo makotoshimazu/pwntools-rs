@@ -67,7 +67,7 @@ impl ToVec for [u8] {
 }
 
 #[async_trait]
-trait Connection: Sized {
+pub trait Connection: Sized {
     type Reader: Send + Unpin + AsyncRead;
     type Writer: Send + Unpin + AsyncWrite;
 
