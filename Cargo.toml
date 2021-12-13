@@ -21,10 +21,10 @@ num-traits = "0.2"
 
 # TODO: Once https://github.com/unicorn-engine/unicorn/pull/1447 is merged to trunk and published, use the official unicorn crate.
 # unicorn = { git = "https://github.com/Hakuyume/unicorn", branch = "build-in-build-script-master" }
-unicorn-engine = "2.0.0-rc4"
+unicorn-engine = "2.0.0-rc5"
 async-trait = "0.1.51"
 tokio = { version = "1.10.0", features=["macros", "io-util", "io-std", "process"] }
 futures = "0.3.16"
 
 [dev-dependencies]
-clap = "3.0.0-beta.5"
+clap = "=3.0.0-beta.5"
