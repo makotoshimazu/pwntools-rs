@@ -18,7 +18,9 @@ use futures::future;
 use std::ffi::OsStr;
 use std::io;
 use std::process::Stdio;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{
+    AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf, WriteHalf,
+};
 use tokio::net::TcpStream;
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
@@ -65,18 +67,44 @@ impl ToVec for [u8] {
 }
 
 #[async_trait]
-pub trait Connection {
-    async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()>;
-    async fn sendline<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
-        self.send(data).await?;
-        self.send(b"\n").await?;
+trait Connection: Sized {
+    type Reader: Send + Unpin + AsyncRead;
+    type Writer: Send + Unpin + AsyncWrite;
+
+    fn reader_mut(&mut self) -> &mut Self::Reader;
+    fn writer_mut(&mut self) -> &mut Self::Writer;
+    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer);
+
+    async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
+        let writer = self.writer_mut();
+        writer.write_all(data.to_vec().as_slice()).await?;
+        writer.flush().await?;
         Ok(())
     }
-    async fn recvline(&mut self) -> io::Result<Vec<u8>> {
-        self.recvuntil(b"\n").await
+
+    async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
+        let reader = self.reader_mut();
+        let mut buf = vec![];
+        loop {
+            let mut buf_ = [0];
+            reader.read_exact(&mut buf_).await?;
+            buf.extend_from_slice(&buf_[..]);
+            if buf.ends_with(pattern) {
+                break;
+            }
+        }
+        Ok(buf)
     }
-    async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>>;
-    async fn interactive(self) -> io::Result<()>;
+
+    async fn interactive(mut self) -> io::Result<()> {
+        let (reader, writer) = self.split_mut();
+        future::try_join(
+            tokio::io::copy(&mut tokio::io::stdin(), writer),
+            tokio::io::copy(reader, &mut tokio::io::stdout()),
+        )
+        .await?;
+        Ok(())
+    }
 }
 
 impl Process {
@@ -101,78 +129,47 @@ impl Process {
 
 #[async_trait]
 impl Connection for Process {
-    async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
-        self.stdin.write_all(&data.to_vec()).await?;
-        self.stdin.flush().await?;
-        Ok(())
+    type Reader = BufReader<ChildStdout>;
+    type Writer = ChildStdin;
+
+    fn reader_mut(&mut self) -> &mut Self::Reader {
+        &mut self.stdout_reader
     }
 
-    async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
-        let mut result = vec![];
-
-        let mut buf = [0];
-        while self.stdout_reader.read_exact(&mut buf).await.is_ok() {
-            result.extend_from_slice(&buf);
-            if result.ends_with(pattern) {
-                return Ok(result);
-            }
-        }
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "`pattern` not found before reaching to the end.",
-        ))
+    fn writer_mut(&mut self) -> &mut Self::Writer {
+        &mut self.stdin
     }
 
-    async fn interactive(mut self) -> io::Result<()> {
-        future::try_join(
-            tokio::io::copy(&mut tokio::io::stdin(), &mut self.stdin),
-            tokio::io::copy(&mut self.stdout_reader, &mut tokio::io::stdout()),
-        )
-        .await?;
-
-        Ok(())
+    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
+        (&mut self.stdout_reader, &mut self.stdin)
     }
 }
 
 pub struct Remote {
-    stream: TcpStream,
+    reader: ReadHalf<TcpStream>,
+    writer: WriteHalf<TcpStream>,
 }
 
 impl Remote {
     pub async fn new(addr: &str) -> io::Result<Self> {
-        let stream = TcpStream::connect(addr).await?;
-        Ok(Self { stream })
+        let (reader, writer) = tokio::io::split(TcpStream::connect(addr).await?);
+        Ok(Self { reader, writer })
     }
 }
 
-#[async_trait]
 impl Connection for Remote {
-    async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
-        self.stream.write_all(data.to_vec().as_slice()).await?;
-        self.stream.flush().await?;
-        Ok(())
+    type Reader = ReadHalf<TcpStream>;
+    type Writer = WriteHalf<TcpStream>;
+
+    fn reader_mut(&mut self) -> &mut Self::Reader {
+        &mut self.reader
     }
 
-    async fn recvuntil(&mut self, pattern: &[u8]) -> io::Result<Vec<u8>> {
-        let mut buf = vec![];
-        loop {
-            let mut buf_ = [0];
-            self.stream.read_exact(&mut buf_).await?;
-            buf.extend_from_slice(&buf_[..]);
-            if buf.ends_with(pattern) {
-                break;
-            }
-        }
-        Ok(buf)
+    fn writer_mut(&mut self) -> &mut Self::Writer {
+        &mut self.writer
     }
 
-    async fn interactive(self) -> io::Result<()> {
-        let (mut read_half, mut write_half) = tokio::io::split(self.stream);
-        future::try_join(
-            tokio::io::copy(&mut tokio::io::stdin(), &mut write_half),
-            tokio::io::copy(&mut read_half, &mut tokio::io::stdout()),
-        )
-        .await?;
-        Ok(())
+    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
+        (&mut self.reader, &mut self.writer)
     }
 }
