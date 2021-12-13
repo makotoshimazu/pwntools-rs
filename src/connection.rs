@@ -73,7 +73,7 @@ trait Connection: Sized {
 
     fn reader_mut(&mut self) -> &mut Self::Reader;
     fn writer_mut(&mut self) -> &mut Self::Writer;
-    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer);
+    fn reader_and_writer_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer);
 
     async fn send<D: ?Sized + ToVec + Sync>(&mut self, data: &D) -> io::Result<()> {
         let writer = self.writer_mut();
@@ -97,7 +97,7 @@ trait Connection: Sized {
     }
 
     async fn interactive(mut self) -> io::Result<()> {
-        let (reader, writer) = self.split_mut();
+        let (reader, writer) = self.reader_and_writer_mut();
         future::try_join(
             tokio::io::copy(&mut tokio::io::stdin(), writer),
             tokio::io::copy(reader, &mut tokio::io::stdout()),
@@ -140,7 +140,7 @@ impl Connection for Process {
         &mut self.stdin
     }
 
-    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
+    fn reader_and_writer_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
         (&mut self.stdout_reader, &mut self.stdin)
     }
 }
@@ -169,7 +169,7 @@ impl Connection for Remote {
         &mut self.writer
     }
 
-    fn split_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
+    fn reader_and_writer_mut(&mut self) -> (&mut Self::Reader, &mut Self::Writer) {
         (&mut self.reader, &mut self.writer)
     }
 }
