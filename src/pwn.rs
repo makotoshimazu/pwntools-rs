@@ -12,13 +12,10 @@
 //! println!("bss: {:#08x}", pwn.bss().unwrap());
 //! ```
 
-use std::borrow::BorrowMut;
-
 use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
 };
-use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
 
 // use num_derive::{FromPrimitive, ToPrimitive};
 // use num_traits::FromPrimitive;
@@ -96,7 +93,11 @@ impl Pwn {
     }
 
     // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
+    #[cfg(feature = "use-unicorn")]
     pub fn plt(&self, name: &str) -> Option<u64> {
+        use std::borrow::BorrowMut;
+        use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
+
         let plt = self.get_section(".plt")?;
         dbg!(plt.header.sh_addr);
 
@@ -153,6 +154,16 @@ impl Pwn {
             pc += 4;
         }
         None
+    }
+
+    /// Look up the program counter of the PLT by name of the symbol in GOT.
+    /// This internally runs code in the .plt section, compares the address read
+    /// by the code with a GOT entry, and returns the address when the matched
+    /// GOT symbol name is `name`.
+    #[allow(unused_variables)]
+    #[cfg(not(feature = "use-unicorn"))]
+    pub fn plt(&self, name: &str) -> Option<u64> {
+        panic!("enable use-unicorn feature to use this function");
     }
 
     /// Search the symbol's address in the Global Offset Table.

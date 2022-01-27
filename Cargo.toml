@@ -14,6 +14,11 @@ version = "0.3.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.docs.rs]
+# Do not include `use-unicorn` feature because building unicorn needs
+# network connectivity and it's disallowed in the crates.io's docker image.
+no-default-features = true
+
 [dependencies]
 elf-utilities = "=0.2.8"
 num-derive = "0.3"
@@ -21,10 +26,14 @@ num-traits = "0.2"
 
 # TODO: Once https://github.com/unicorn-engine/unicorn/pull/1447 is merged to trunk and published, use the official unicorn crate.
 # unicorn = { git = "https://github.com/Hakuyume/unicorn", branch = "build-in-build-script-master" }
-unicorn-engine = "2.0.0-rc5"
+unicorn-engine = { version = "2.0.0-rc5", optional = true }
 async-trait = "0.1.51"
-tokio = { version = "1.10.0", features=["macros", "io-util", "io-std", "process"] }
+tokio = { version = "1.10.0", features=["macros", "io-util", "io-std", "process", "net"] }
 futures = "0.3.16"
 
 [dev-dependencies]
 clap = {version = "3", features = ["derive"]}
+
+[features]
+default = ["use-unicorn"]
+use-unicorn = ["unicorn-engine"]
