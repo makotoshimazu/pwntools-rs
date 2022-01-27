@@ -93,6 +93,7 @@ impl Pwn {
     }
 
     /// Look up the program counter of the PLT by name of the symbol in GOT.
+    ///
     /// This internally runs code in the .plt section, compares the address read
     /// by the code with a GOT entry, and returns the address when the matched
     /// GOT symbol name is `name`.
