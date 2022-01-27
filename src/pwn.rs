@@ -92,9 +92,22 @@ impl Pwn {
         result.first().copied()
     }
 
-    // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
-    #[cfg(feature = "use-unicorn")]
+    /// Look up the program counter of the PLT by name of the symbol in GOT.
+    /// This internally runs code in the .plt section, compares the address read
+    /// by the code with a GOT entry, and returns the address when the matched
+    /// GOT symbol name is `name`.
     pub fn plt(&self, name: &str) -> Option<u64> {
+        self.plt_impl(name)
+    }
+
+    #[cfg(not(feature = "use-unicorn"))]
+    fn plt_impl(&self, _name: &str) -> Option<u64> {
+        panic!("enable use-unicorn feature to use this function");
+    }
+
+    #[cfg(feature = "use-unicorn")]
+    // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
+    fn plt_impl(&self, name: &str) -> Option<u64> {
         use std::borrow::BorrowMut;
         use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
 
@@ -154,16 +167,6 @@ impl Pwn {
             pc += 4;
         }
         None
-    }
-
-    /// Look up the program counter of the PLT by name of the symbol in GOT.
-    /// This internally runs code in the .plt section, compares the address read
-    /// by the code with a GOT entry, and returns the address when the matched
-    /// GOT symbol name is `name`.
-    #[allow(unused_variables)]
-    #[cfg(not(feature = "use-unicorn"))]
-    pub fn plt(&self, name: &str) -> Option<u64> {
-        panic!("enable use-unicorn feature to use this function");
     }
 
     /// Search the symbol's address in the Global Offset Table.
