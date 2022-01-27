@@ -12,13 +12,10 @@
 //! println!("bss: {:#08x}", pwn.bss().unwrap());
 //! ```
 
-use std::borrow::BorrowMut;
-
 use elf_utilities::{
     file, section,
     section::{Contents64, Section64},
 };
-use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
 
 // use num_derive::{FromPrimitive, ToPrimitive};
 // use num_traits::FromPrimitive;
@@ -95,8 +92,26 @@ impl Pwn {
         result.first().copied()
     }
 
-    // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
+    /// Look up the program counter of the PLT by name of the symbol in GOT.
+    ///
+    /// This internally runs code in the .plt section, compares the address read
+    /// by the code with a GOT entry, and returns the address when the matched
+    /// GOT symbol name is `name`.
     pub fn plt(&self, name: &str) -> Option<u64> {
+        self.plt_impl(name)
+    }
+
+    #[cfg(not(feature = "use-unicorn"))]
+    fn plt_impl(&self, _name: &str) -> Option<u64> {
+        panic!("enable use-unicorn feature to use this function");
+    }
+
+    #[cfg(feature = "use-unicorn")]
+    // See: https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/elf/plt.py#L18
+    fn plt_impl(&self, name: &str) -> Option<u64> {
+        use std::borrow::BorrowMut;
+        use unicorn_engine::unicorn_const::{Arch, HookType, Mode, Permission};
+
         let plt = self.get_section(".plt")?;
         dbg!(plt.header.sh_addr);
 
