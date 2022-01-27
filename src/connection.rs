@@ -102,6 +102,10 @@ pub trait Connection: Sized {
         Ok(buf)
     }
 
+    async fn recvline(&mut self) -> io::Result<Vec<u8>> {
+        self.recvuntil(b"\n").await
+    }
+
     async fn interactive(mut self) -> io::Result<()> {
         let (reader, writer) = self.reader_and_writer_mut();
         future::try_join(
